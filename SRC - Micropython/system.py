@@ -45,12 +45,14 @@ class Setup:
         self.date = datetime.now()
         self.is_booted = False  # Track boot success internally
         self.temp = TemperatureSystem(2)
+        self.fan = FanSystem(3, 5)
 
 
     def BootSequence(self):
         self.board_led.blink()
         self.board_led.LED_On()
-        self.temp.GetTemperature(True)
+        self.temp.GetTemperature()
+        self.fan.FanPeriod()
         self.VerificationOfInstall()
         self.LogoDisplay()
         self.is_booted = True  # Set status flag to true
@@ -73,6 +75,19 @@ class Setup:
             
         print(f"User saved: {data['USER']}")
 
+    def UserVerification(self):
+        username = input(f"Username: ")
+        password = input(f"Password: ")
+        with open(config_file, "r") as file:
+            data = json.load(file)
+            
+        if "USER" not in data:
+            data["USER"] = {}
+            
+        if str(username) == data["USER"]["USER_NAME"]:
+            if str(password) == data["USER"]["USER_PASSWORD"]:
+                print(f"User Verified")
+                print(f"Hello {data["USER"]["USER_NAME"]}")
     def CreateDirectory(self):
         for directory in [self.data, self.telemetry]:
             try:
@@ -101,6 +116,7 @@ class Setup:
             print(f"Booting Device")
             self.log = Log((f"Booted: {self.date}\n"), self.telemetry, "Device-Log")
             self.log.EditFiel()
+            self.UserVerification()
 
 
     def VerificationOfBoot(self):
@@ -140,6 +156,14 @@ class Setup:
 XXXXXXXXXXXXXXX                  
 """)
 
+class DignosticLEDSystem:
+    def __init__(self, pin, LED_NUM):
+        self.pin = pin
+        self.LED_NUM = LED_NUM
+
+class OLED_DISPLAY:
+    def __init__(self):
+        pass
 
 class Log:
     def __init__(self, data, location, file_name):
@@ -158,8 +182,18 @@ class Log:
             f.write(str(self.data))  
 
 class FanSystem:
-    def __init__(self):
-        pass
+    def __init__(self, pin, delay):
+        self.pin = pin
+        self.delay = delay
+        self.FAN = machine.Pin(self.pin, machine.Pin.OUT)
+    def FanHigh(self):
+        self.FAN.value(1)
+    def FanLow(self):
+        self.FAN.value(0)
+    def FanPeriod(self):
+        self.FAN.value(1)
+        time.sleep(self.delay)
+        self.FAN.value(0)
 
 class TemperatureSystem:
     def __init__(self, pin):
@@ -246,6 +280,5 @@ class EnvironmentLoop:
 
 setup = Setup(1)
 log = Log("Hello world", "data", "hello.md")
-setup.VerificationOfInstall()
 setup.BootSequence()
 setup.VerificationOfBoot()
